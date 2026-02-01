@@ -150,7 +150,7 @@ section {
 }
 
 .project-card img {
-    width: 100%;
+    width: 100px;
     height: 420px;
     object-fit: cover;
 }
@@ -293,5 +293,45 @@ section {
 
     .project-card img {
         height: 260px;
+    }
+}
+
+/* =========================
+   MOBILE HEADER FIX
+   ========================= */
+@media (max-width: 768px) {
+    .nav {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 18px 24px;
+        gap: 12px;
+    }
+
+    .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .nav-links a {
+        margin-left: 0;
+        font-size: 1rem;
+    }
+
+    .resume-btn {
+        padding: 6px 14px;
+    }
+}
+
+/* =========================
+   MOBILE PROJECT IMAGE FIX
+   ========================= */
+@media (max-width: 768px) {
+    .project-card img {
+        height: auto;
+        /* stop forced crop */
+        object-fit: contain;
+        /* show full image */
+        background: #0b0d12;
     }
 }
