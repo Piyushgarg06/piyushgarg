@@ -328,10 +328,11 @@ section {
    ========================= */
 @media (max-width: 768px) {
     .project-card img {
-        height: auto;
-        /* stop forced crop */
-        object-fit: contain;
-        /* show full image */
-        background: #0b0d12;
+        width: 100%;
+        height: 260px;
+        /* force readable size */
+        object-fit: cover;
+        /* fill nicely */
+        object-position: center;
     }
 }
