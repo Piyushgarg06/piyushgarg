@@ -382,9 +382,12 @@
 
         function buildFilters() {
             const langs = [...new Set(allRepos.map(r => r.language).filter(Boolean))];
-            langs.sort();
+            // Pin Python and Jupyter Notebook first, rest alphabetically
+            const pinned = ['Python', 'Jupyter Notebook'];
+            const rest = langs.filter(l => !pinned.includes(l)).sort();
+            const ordered = [...pinned.filter(l => langs.includes(l)), ...rest];
 
-            langs.forEach(lang => {
+            ordered.forEach(lang => {
                 const btn = document.createElement('button');
                 btn.className = 'filter-btn';
                 btn.dataset.lang = lang;
