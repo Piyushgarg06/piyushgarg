@@ -255,6 +255,22 @@
             text-decoration: none;
         }
 
+        /* Pinned badge */
+        .pinned-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--accent);
+            background: rgba(139, 92, 246, 0.12);
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            padding: 2px 10px;
+            border-radius: 12px;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+        }
+
         /* Count badge */
         .repo-count {
             text-align: center;
@@ -301,7 +317,7 @@
     <main class="projects-page">
         <div class="page-header">
             <h1>All Projects</h1>
-            <p>Public repositories fetched directly from GitHub.</p>
+            <p>A collection of things I've built and contributed to.</p>
             <a href="https://github.com/Piyushgarg06" target="_blank" class="gh-link">github.com/Piyushgarg06 ↗</a>
         </div>
 
@@ -334,6 +350,9 @@
         const filterBar = document.getElementById('filterBar');
         const countEl = document.getElementById('repoCount');
 
+        // Repos to pin at the top
+        const PINNED_REPOS = ['TriageIQ', 'SynapseAI', 'diffusion-calorimeter-generation'];
+
         // Language colors (GitHub-style)
         const langColors = {
             'Python': '#3572A5',
@@ -352,6 +371,14 @@
 
         let allRepos = [];
 
+        function sortWithPinned(repos) {
+            const pinned = repos.filter(r => PINNED_REPOS.includes(r.name));
+            const rest = repos.filter(r => !PINNED_REPOS.includes(r.name));
+            // Keep pinned in the order defined in PINNED_REPOS
+            pinned.sort((a, b) => PINNED_REPOS.indexOf(a.name) - PINNED_REPOS.indexOf(b.name));
+            return [...pinned, ...rest];
+        }
+
         async function fetchRepos() {
             try {
                 const res = await fetch(
@@ -366,7 +393,7 @@
                 allRepos = allRepos.filter(r => !r.fork);
 
                 buildFilters();
-                renderRepos(allRepos);
+                renderRepos(sortWithPinned(allRepos));
             } catch (err) {
                 grid.innerHTML = `
                     <div class="error-msg" style="grid-column: 1 / -1;">
@@ -406,15 +433,18 @@
                     ? allRepos
                     : allRepos.filter(r => r.language === lang);
 
-                renderRepos(filtered);
+                renderRepos(sortWithPinned(filtered));
             });
         }
 
         function renderRepos(repos) {
-            grid.innerHTML = repos.map(repo => `
+            grid.innerHTML = repos.map(repo => {
+                const isPinned = PINNED_REPOS.includes(repo.name);
+                return `
                 <a href="${repo.html_url}" target="_blank" class="repo-card">
                     <div class="repo-name">
                         ${formatName(repo.name)}
+                        ${isPinned ? '<span class="pinned-badge">📌 Pinned</span>' : ''}
                         <span class="arrow">↗</span>
                     </div>
                     <div class="repo-desc">${repo.description || '<span style="opacity:0.4;">No description</span>'}</div>
@@ -439,7 +469,7 @@
                         ` : ''}
                     </div>
                 </a>
-            `).join('');
+            `}).join('');
 
             countEl.textContent = `Showing ${repos.length} project${repos.length !== 1 ? 's' : ''}`;
         }
