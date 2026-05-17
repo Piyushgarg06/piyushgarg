@@ -24,8 +24,22 @@
 
 <body>
 
+    <div class="aurora"></div>
+    <div class="bg-orb bg-orb--1"></div>
+    <div class="bg-orb bg-orb--2"></div>
+    <div class="bg-orb bg-orb--3"></div>
+    <canvas id="particleCanvas"></canvas>
     <div class="progress-bar"></div>
     <div class="cursor-glow"></div>
+
+    <!-- Floating decorative metrics -->
+    <div class="floating-metrics">
+        <span class="metric" style="--x: 8%; --y: 25%; --delay: 0s;">loss: 0.003 ↓</span>
+        <span class="metric" style="--x: 88%; --y: 18%; --delay: 2s;">accuracy: 97.2%</span>
+        <span class="metric" style="--x: 78%; --y: 72%; --delay: 4s;">epochs: 100</span>
+        <span class="metric" style="--x: 12%; --y: 68%; --delay: 1s;">lr: 3e-4</span>
+        <span class="metric" style="--x: 92%; --y: 50%; --delay: 3s;">f1: 0.96</span>
+    </div>
 
     <!-- HEADER -->
     <header class="header">
@@ -47,7 +61,18 @@
 
     <!-- HERO -->
     <section id="home" class="hero reveal">
-        <h1 class="hero-title">Hi, I’m <span>Piyush Garg</span></h1>
+
+        <div class="terminal" id="terminal">
+            <div class="terminal-header">
+                <span class="terminal-dot red"></span>
+                <span class="terminal-dot yellow"></span>
+                <span class="terminal-dot green"></span>
+                <span class="terminal-title">portfolio.py</span>
+            </div>
+            <div class="terminal-body" id="terminalBody"></div>
+        </div>
+
+        <h1 class="hero-title">Hi, I'm <span class="gradient-text">Piyush Garg</span></h1>
         <h2 class="hero-role">AI Engineer</h2>
         <p class="hero-subtitle">
             Focused on Machine Learning, Deep Learning, and building strong algorithmic foundations.
@@ -189,7 +214,7 @@
 
     <!-- CONTACT -->
     <section id="contact" class="section reveal center">
-        <h2 class="section-title">Let’s Connect</h2>
+        <h2 class="section-title">Let's Connect</h2>
 
         <p class="contact-text">
             Open to collaborating on meaningful projects, learning opportunities,
