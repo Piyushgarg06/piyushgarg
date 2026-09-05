@@ -127,6 +127,30 @@ a {
   border-bottom-color: var(--muted);
 }
 
+/* ─── Resume button ────────────────────────────── */
+
+.nav-resume-btn {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--bg);
+  background: var(--accent);
+  padding: 5px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--accent);
+  transition: background 0.2s, color 0.2s, transform 0.15s, box-shadow 0.2s;
+  letter-spacing: 0.02em;
+  cursor: none;
+}
+
+.nav-resume-btn:hover {
+  background: transparent;
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(200, 251, 74, 0.15);
+}
+
 /* ─── Contact links ────────────────────────────── */
 
 .contact-link {
