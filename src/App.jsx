@@ -73,10 +73,10 @@ export default function App() {
               <About />
 
               <div className="section-divider" />
-              <Projects />
+              <Experience />
 
               <div className="section-divider" />
-              <Experience />
+              <Projects />
 
               <div className="section-divider" />
               <Contact />

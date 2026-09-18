@@ -49,6 +49,13 @@ export const data = {
 
   experience: [
     {
+      role: "AI Implementation / Development Intern",
+      org: "MNB Research · AbroBot",
+      period: "Sep 2026 — Present",
+      description:
+        "Supporting the implementation and refinement of AI workflows and automations for AbroBot — an AI study-abroad mentor serving 350k+ students. Working with LLM-based tools, RAG pipelines, and AI agents (n8n) to streamline university selection, SOP guidance, and visa workflows. Bridging technical and business teams for smooth onboarding of new AI tooling.",
+    },
+    {
       role: "Open Source Contributor",
       org: "Various",
       period: "2024 — Present",
