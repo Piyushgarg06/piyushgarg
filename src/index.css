@@ -5,12 +5,42 @@
 /* ─── Design tokens ────────────────────────────── */
 
 :root {
+  /* Background family */
   --bg:      #080808;
-  --surface: #0F0F0F;
-  --border:  #1A1A1A;
-  --text:    #EBEBEB;
-  --muted:   #4A4A4A;
+  --surface: #111111;
+  --raised:  #161616;
+  --border:  #1E1E1E;
+
+  /* Text family — all pass WCAG AA on --bg */
+  --text:    #F0F0F0;  /* 18.7:1 */
+  --text-2:  #A0A0A0;  /* 5.3:1  */
+  --muted:   #717171;  /* 4.6:1  ← was #4A4A4A (3.5:1, failed AA) */
+
+  /* Accent — used decoratively + for interactive states */
   --accent:  #C8FB4A;
+  --accent-dim: rgba(200, 251, 74, 0.12);
+
+  /* Type scale (reference — use inline where needed) */
+  --t-xs:   11px;
+  --t-sm:   13px;
+  --t-base: 15px;
+  --t-md:   18px;
+  --t-lg:   24px;
+  --t-xl:   32px;
+  --t-2xl:  48px;
+  --t-3xl:  72px;
+
+  /* Spacing scale */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  24px;
+  --s-6:  32px;
+  --s-7:  48px;
+  --s-8:  64px;
+  --s-9:  96px;
+  --s-10: 128px;
 }
 
 /* ─── Base resets ──────────────────────────────── */
@@ -37,22 +67,48 @@ html {
 }
 
 body {
-  font-family: "Inter", sans-serif;
-  background-color: #080808 !important;
-  background: var(--bg) !important;
-  color: var(--text) !important;
-  line-height: 1.6;
+  font-family: "DM Sans", sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
   overflow-x: hidden;
 }
 
 /* ─── Typography ───────────────────────────────── */
 
+/* Fraunces: optical-size variable serif — used for big display text */
 .font-display {
-  font-family: "Syne", sans-serif;
+  font-family: "Fraunces", serif;
+  font-optical-sizing: auto;
 }
 
+/* JetBrains Mono: code labels, numbers, meta */
 .font-mono {
   font-family: "JetBrains Mono", monospace;
+}
+
+/* ─── Section label utility ─────────────────────── */
+/* Shared across About, Experience, Projects — DRY */
+
+.section-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: var(--t-xs);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-bottom: var(--s-7);
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.section-label::before {
+  content: "";
+  display: inline-block;
+  width: 20px;
+  height: 1px;
+  background: var(--accent);
+  flex-shrink: 0;
 }
 
 /* ─── Selection ────────────────────────────────── */
@@ -62,10 +118,18 @@ body {
   color: var(--bg);
 }
 
+/* ─── Focus rings — global, accessible ─────────── */
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
 /* ─── Scrollbar ────────────────────────────────── */
 
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -74,7 +138,6 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -91,22 +154,25 @@ a {
 /* ─── Nav links ────────────────────────────────── */
 
 .nav-link {
-  font-size: 13px;
+  font-size: var(--t-sm);
   color: var(--muted);
   transition: color 0.15s;
+  font-weight: 400;
 }
 
-.nav-link:hover {
+.nav-link:hover,
+.nav-link[aria-current="page"] {
   color: var(--text);
 }
 
 .nav-kbd {
-  font-size: 11px;
+  font-size: var(--t-xs);
   color: var(--muted);
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: 2px;
   padding: 2px 6px;
   transition: border-color 0.15s;
+  font-family: "JetBrains Mono", monospace;
 }
 
 .nav-kbd:hover {
@@ -132,29 +198,57 @@ a {
 .nav-resume-btn {
   display: inline-flex;
   align-items: center;
-  font-size: 12px;
+  gap: 5px;
+  font-size: var(--t-xs);
   font-weight: 500;
+  font-family: "JetBrains Mono", monospace;
   color: var(--bg);
   background: var(--accent);
   padding: 5px 14px;
-  border-radius: 4px;
+  border-radius: 2px;
   border: 1px solid var(--accent);
-  transition: background 0.2s, color 0.2s, transform 0.15s, box-shadow 0.2s;
-  letter-spacing: 0.02em;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+  letter-spacing: 0.04em;
   cursor: none;
+  text-transform: uppercase;
 }
 
 .nav-resume-btn:hover {
   background: transparent;
   color: var(--accent);
   transform: translateY(-1px);
-  box-shadow: 0 0 12px rgba(200, 251, 74, 0.15);
+}
+
+/* ─── Game mode trigger button in navbar ────────── */
+
+.nav-game-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--t-xs);
+  font-family: "JetBrains Mono", monospace;
+  color: var(--muted);
+  background: transparent;
+  padding: 5px 11px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.15s;
+  letter-spacing: 0.05em;
+  cursor: none;
+  text-transform: uppercase;
+}
+
+.nav-game-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+  transform: translateY(-1px);
 }
 
 /* ─── Contact links ────────────────────────────── */
 
 .contact-link {
-  font-size: 15px;
+  font-size: var(--t-base);
   color: var(--muted);
   transition: color 0.15s;
   padding-bottom: 1px;
@@ -166,17 +260,6 @@ a {
   border-bottom-color: var(--muted);
 }
 
-/* ─── Section divider ──────────────────────────── */
-
-.section-divider {
-  width: 100%;
-  max-width: 1100px;
-  margin-left: auto;
-  margin-right: auto;
-  height: 1px;
-  background: var(--border);
-}
-
 /* ─── Hero grid background ─────────────────────── */
 
 .hero-grid {
@@ -185,17 +268,13 @@ a {
   background-image:
     linear-gradient(var(--border) 1px, transparent 1px),
     linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 48px 48px;
-  animation: grid-drift 12s linear infinite;
+  background-size: 56px 56px;
+  animation: grid-drift 20s linear infinite;
 }
 
 @keyframes grid-drift {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-48px);
-  }
+  from { transform: translateY(0); }
+  to   { transform: translateY(-56px); }
 }
 
 /* ─── Container ────────────────────────────────── */
@@ -222,9 +301,41 @@ a {
   }
 }
 
+/* ─── Tag pill ──────────────────────────────────── */
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font-size: var(--t-xs);
+  font-family: "JetBrains Mono", monospace;
+  color: var(--muted);
+  transition: color 0.15s, border-color 0.15s;
+  letter-spacing: 0.03em;
+}
+
 /* ─── Skeleton animation (AllProjects) ─────────── */
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.6; }
+  0%, 100% { opacity: 0.25; }
+  50%       { opacity: 0.5; }
+}
+
+/* ─── Reduced motion — override everything ──────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .hero-grid {
+    animation: none;
+  }
 }

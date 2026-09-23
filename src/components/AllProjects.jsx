@@ -208,10 +208,12 @@ function RepoCard({ repo, index }) {
 function SkeletonCard() {
   return (
     <div
+      aria-hidden="true"
       style={{
         padding: "20px 24px",
         border: "1px solid var(--border)",
-        borderRadius: 4,
+        borderRadius: 2,
+        background: "var(--raised)",
       }}
     >
       <div
@@ -268,11 +270,22 @@ export default function AllProjects() {
       <div className="container">
         <AnimatedSection>
           {/* Back to home */}
-          <div style={{ marginBottom: 32 }}>
+          <div style={{ marginBottom: 40 }}>
             <a
               href="#"
-              className="hero-link font-mono"
-              style={{ fontSize: 12, color: "var(--muted)" }}
+              className="font-mono"
+              style={{
+                fontSize: 11,
+                color: "var(--muted)",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                transition: "color 0.15s",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted)")}
             >
               ← Back to home
             </a>
@@ -284,20 +297,12 @@ export default function AllProjects() {
               display: "flex",
               justifyContent: "space-between",
               alignItems: "baseline",
-              marginBottom: 12,
+              marginBottom: 20,
               flexWrap: "wrap",
               gap: 8,
             }}
           >
-            <p
-              className="font-display"
-              style={{
-                fontSize: 13,
-                color: "var(--muted)",
-                textTransform: "uppercase",
-                letterSpacing: "0.12em",
-              }}
-            >
+            <p className="section-label" style={{ marginBottom: 0 }}>
               All Projects
             </p>
             <span
@@ -306,7 +311,7 @@ export default function AllProjects() {
             >
               {loading
                 ? "Loading..."
-                : `${allRepos.length} repositories · ${languages.length - 1} languages`}
+                : `${allRepos.length} repos · ${languages.length - 1} languages`}
             </span>
           </div>
 
@@ -334,18 +339,19 @@ export default function AllProjects() {
                     key={lang}
                     onClick={() => setActiveLanguage(lang)}
                     style={{
-                      padding: "6px 14px",
-                      fontSize: 12,
-                      fontFamily: "'Inter', sans-serif",
+                      padding: "5px 12px",
+                      fontSize: 11,
+                      fontFamily: "'JetBrains Mono', monospace",
                       color: isActive ? "var(--bg)" : "var(--muted)",
-                      background: isActive ? "var(--text)" : "transparent",
-                      border: `1px solid ${isActive ? "var(--text)" : "var(--border)"}`,
-                      borderRadius: 3,
+                      background: isActive ? "var(--accent)" : "transparent",
+                      border: `1px solid ${isActive ? "var(--accent)" : "var(--border)"}`,
+                      borderRadius: 2,
                       cursor: "none",
                       transition: "all 0.15s",
                       display: "flex",
                       alignItems: "center",
                       gap: 6,
+                      letterSpacing: "0.03em",
                     }}
                   >
                     {lang !== "All" && (
@@ -362,10 +368,10 @@ export default function AllProjects() {
                     {lang}
                     <span
                       style={{
-                        fontSize: 10,
-                        opacity: 0.6,
+                        fontSize: 9,
+                        opacity: 0.7,
+                        fontFamily: "'JetBrains Mono', monospace",
                       }}
-                      className="font-mono"
                     >
                       {count}
                     </span>
@@ -397,8 +403,8 @@ export default function AllProjects() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-                gap: 12,
+                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                gap: 16,
               }}
             >
               {Array.from({ length: 6 }).map((_, i) => (
@@ -427,8 +433,8 @@ export default function AllProjects() {
               }
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-                gap: 12,
+                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                gap: 16,
               }}
             >
               {repos.map((repo, i) => (
@@ -445,13 +451,7 @@ export default function AllProjects() {
         </AnimatedSection>
       </div>
 
-      {/* Skeleton pulse animation */}
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.3; }
-          50% { opacity: 0.6; }
-        }
-      `}</style>
+
     </section>
   );
 }

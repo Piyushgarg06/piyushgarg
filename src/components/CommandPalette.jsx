@@ -120,7 +120,7 @@ export default function CommandPalette({
                   height: 48,
                   padding: "0 16px",
                   fontSize: 16,
-                  fontFamily: "Inter, sans-serif",
+                  fontFamily: "DM Sans, sans-serif",
                   color: "var(--text)",
                   background: "transparent",
                   border: "none",
@@ -147,7 +147,7 @@ export default function CommandPalette({
                     alignItems: "center",
                     padding: "0 16px",
                     fontSize: 14,
-                    fontFamily: "Inter, sans-serif",
+                    fontFamily: "DM Sans, sans-serif",
                     color:
                       selectedIndex === i ? "var(--text)" : "var(--muted)",
                     background:

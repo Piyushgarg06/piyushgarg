@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
-import { springs } from "../constants/data";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
+/* ─── Maze layout (20 cols x 16 rows) ───────────
+   1 = wall, 0 = lang dot, 3 = power pellet, 2 = corridor/empty
+─────────────────────────────────────────────── */
 const COLS = 20;
 const ROWS = 16;
 
 const INITIAL_MAZE = [
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 3, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 3, 1],
   [1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1],
   [1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1],
   [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -15,335 +17,486 @@ const INITIAL_MAZE = [
   [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
   [1, 1, 1, 1, 0, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 0, 1, 1, 1, 1],
   [1, 2, 2, 1, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 1, 2, 2, 1],
-  [1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 1, 1, 1, 0, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 0, 1, 1, 1, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 1],
   [1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1],
-  [1, 0, 0, 1, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+  [1, 3, 0, 1, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 1, 0, 3, 1],
   [1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1],
   [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ];
 
-// Map of coding languages to collect
-const LANG_MAP = ["JS", "Py", "TS", "Go", "Rs", "C+", "H", "C"];
-
+/* ─── Coding Languages ─── */
+const LANG_MAP = ["JS", "Py", "TS", "Go", "Rs", "C+", "Kt", "Rb"];
 const LANG_COLORS = {
-  Py: "#3572A5",
   JS: "#f1e05a",
+  Py: "#3878b4",
   TS: "#3178c6",
   Go: "#00ADD8",
   Rs: "#dea584",
   "C+": "#f34b7d",
-  H: "#e34c26",
-  C: "#563d7c",
+  Kt: "#A97BFF",
+  Rb: "#cc342d",
 };
 
-// Deterministically assign a language to each dot position
-const getCellLanguage = (r, c) => {
-  return LANG_MAP[(r * 7 + c * 13) % LANG_MAP.length];
+const getCellLang = (r, c) => LANG_MAP[(r * 7 + c * 13) % LANG_MAP.length];
+
+function countDots(maze) {
+  let n = 0;
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (maze[r][c] === 0 || maze[r][c] === 3) n++;
+  return n;
+}
+const TOTAL_DOTS = countDots(INITIAL_MAZE);
+
+const DIR_MAP = {
+  ArrowUp:    { dx: 0,  dy: -1 },
+  ArrowDown:  { dx: 0,  dy:  1 },
+  ArrowLeft:  { dx: -1, dy:  0 },
+  ArrowRight: { dx: 1,  dy:  0 },
+  w: { dx: 0,  dy: -1 },
+  s: { dx: 0,  dy:  1 },
+  a: { dx: -1, dy:  0 },
+  d: { dx: 1,  dy:  0 },
+  W: { dx: 0,  dy: -1 },
+  S: { dx: 0,  dy:  1 },
+  A: { dx: -1, dy:  0 },
+  D: { dx: 1,  dy:  0 },
 };
+
+function makeGhosts() {
+  return [
+    { x: 9,  y: 8, targetX: 9,  targetY: 7, dirX: 0, dirY: -1, color: "#E06666", speed: 0.075 },
+    { x: 10, y: 8, targetX: 10, targetY: 7, dirX: 0, dirY: -1, color: "#8FAADC", speed: 0.070 },
+    { x: 11, y: 8, targetX: 11, targetY: 7, dirX: 0, dirY: -1, color: "#F6C177", speed: 0.065 },
+  ];
+}
+
+function makeCollection() {
+  return Object.fromEntries(LANG_MAP.map((l) => [l, 0]));
+}
 
 export default function PacmanGame({ onClose }) {
   const canvasRef = useRef(null);
-  const containerRef = useRef(null);
-  const [score, setScore] = useState(0);
-  const [gameState, setGameState] = useState("playing"); // playing, won
-  const [flashRed, setFlashRed] = useState(false);
+  const gameRef   = useRef(null);
+  const rafRef    = useRef(null);
+  const touchRef  = useRef({ x: 0, y: 0 });
 
-  // Score popups for floating "+10" anim
-  const [popups, setPopups] = useState([]);
+  const [score,      setScore]      = useState(0);
+  const [lives,      setLives]      = useState(3);
+  const [status,     setStatus]     = useState("playing");
+  const [progress,   setProgress]   = useState(0);
+  const [popups,     setPopups]     = useState([]);
+  const [flashRed,   setFlashRed]   = useState(false);
+  const [collection, setCollection] = useState(makeCollection());
+  const [isPower,    setIsPower]    = useState(false);
 
+  /* ─── Initialize game state ─── */
+  const initGame = useCallback(() => {
+    gameRef.current = {
+      maze: INITIAL_MAZE.map((r) => [...r]),
+      pacman: {
+        x: 9, y: 12, targetX: 9, targetY: 12,
+        dirX: 0, dirY: 0, nextDirX: 0, nextDirY: 0,
+        speed: 0.12, mouthAngle: 0.25, mouthDir: 1,
+      },
+      ghosts: makeGhosts(),
+      dotsLeft: TOTAL_DOTS,
+      score: 0,
+      lives: 3,
+      frightenUntil: 0,
+      damageUntil: 0,
+      collection: makeCollection(),
+    };
+  }, []);
+
+  const restartGame = useCallback(() => {
+    initGame();
+    setScore(0);
+    setLives(3);
+    setProgress(0);
+    setCollection(makeCollection());
+    setIsPower(false);
+    setStatus("playing");
+  }, [initGame]);
+
+  /* Init on mount */
   useEffect(() => {
+    initGame();
+  }, [initGame]);
+
+  /* ─── Keyboard input ─── */
+  useEffect(() => {
+    const handleKey = (e) => {
+      const dir = DIR_MAP[e.key];
+      if (dir) {
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+          e.preventDefault();
+        }
+        if (gameRef.current) {
+          gameRef.current.pacman.nextDirX = dir.dx;
+          gameRef.current.pacman.nextDirY = dir.dy;
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKey, { passive: false });
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
+
+  /* ─── Touch swipe ─── */
+  const onTouchStart = (e) => {
+    touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+  const onTouchEnd = (e) => {
+    const dx = e.changedTouches[0].clientX - touchRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchRef.current.y;
+    if (Math.abs(dx) < 12 && Math.abs(dy) < 12) return;
+    if (!gameRef.current) return;
+    const p = gameRef.current.pacman;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      p.nextDirX = dx > 0 ? 1 : -1; p.nextDirY = 0;
+    } else {
+      p.nextDirX = 0; p.nextDirY = dy > 0 ? 1 : -1;
+    }
+  };
+
+  /* ─── Main Animation Loop ─── */
+  useEffect(() => {
+    if (status !== "playing") return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
-    let animationFrameId;
-    let maze = INITIAL_MAZE.map((row) => [...row]);
+    const CW = canvas.width / COLS;
+    const CH = canvas.height / ROWS;
 
-    // Resolve color tokens dynamically (safe fallback if document is missing them)
-    const getCSSColor = (varName, fallback) => {
-      if (typeof window === "undefined") return fallback;
-      const val = window
-        .getComputedStyle(document.documentElement)
-        .getPropertyValue(varName);
-      return val.trim() || fallback;
-    };
-
-    const wallColor = getCSSColor("--border", "#1A1A1A");
-    const accentColor = getCSSColor("--accent", "#C8FB4A");
-
-    // Dimensions
-    const cellW = canvas.width / COLS;
-    const cellH = canvas.height / ROWS;
-
-    // Pacman Entity (Grid-locked tile movement engine)
-    const pacman = {
-      x: 9,
-      y: 12,
-      targetX: 9,
-      targetY: 12,
-      dirX: 0,
-      dirY: 0,
-      nextDirX: 0,
-      nextDirY: 0,
-      speed: 0.1, // cell step fraction
-      mouthOpen: true,
-      lastMouthToggle: Date.now(),
-    };
-
-    // Ghosts
-    const ghosts = [
-      {
-        x: 9,
-        y: 8,
-        targetX: 9,
-        targetY: 8,
-        dirX: 0,
-        dirY: -1,
-        color: "#E06666",
-        speed: 0.08,
-      },
-      {
-        x: 10,
-        y: 8,
-        targetX: 10,
-        targetY: 8,
-        dirX: 0,
-        dirY: -1,
-        color: "#8FAADC",
-        speed: 0.08,
-      },
-    ];
-
-    // Confetti particles
-    let confetti = [];
-
-    // Keyboard handlers
-    const handleKeyDown = (e) => {
-      if (
-        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)
-      ) {
-        e.preventDefault(); // Lock screen scroll
-        if (e.key === "ArrowUp") {
-          pacman.nextDirX = 0;
-          pacman.nextDirY = -1;
-        } else if (e.key === "ArrowDown") {
-          pacman.nextDirX = 0;
-          pacman.nextDirY = 1;
-        } else if (e.key === "ArrowLeft") {
-          pacman.nextDirX = -1;
-          pacman.nextDirY = 0;
-        } else if (e.key === "ArrowRight") {
-          pacman.nextDirX = 1;
-          pacman.nextDirY = 0;
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown, { passive: false });
-
-    // Wall checker
     const isWall = (gx, gy) => {
-      const col = Math.round(gx);
-      const row = Math.round(gy);
-      if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return true;
-      return maze[row][col] === 1;
+      const c = Math.round(gx);
+      const r = Math.round(gy);
+      if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return true;
+      return gameRef.current.maze[r][c] === 1;
     };
 
-    // Main Game Loop
-    const loop = () => {
-      // Toggle mouth state
-      if (Date.now() - pacman.lastMouthToggle > 150) {
-        pacman.mouthOpen = !pacman.mouthOpen;
-        pacman.lastMouthToggle = Date.now();
-      }
+    let pulsePhase = 0;
 
-      ctx.fillStyle = "#000000";
+    const step = () => {
+      if (!gameRef.current) return;
+      const g = gameRef.current;
+      const { maze, pacman, ghosts } = g;
+      const now = Date.now();
+      pulsePhase += 0.08;
+
+      const frightened = now < g.frightenUntil;
+      const frightEnding = frightened && (g.frightenUntil - now < 1500);
+
+      /* ── 1. Clear Canvas ── */
+      ctx.fillStyle = "#050505";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Check win condition
-      let hasDots = false;
+      /* ── 2. Draw Maze & Coding Language Dots ── */
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
-          if (maze[r][c] === 0) hasDots = true;
-        }
-      }
+          const cell = maze[r][c];
+          const cx = c * CW + CW / 2;
+          const cy = r * CH + CH / 2;
 
-      if (!hasDots && gameState === "playing") {
-        setGameState("won");
-        setTimeout(() => {
-          setScore(0);
-          setGameState("playing");
-        }, 3000);
-        for (let i = 0; i < 20; i++) {
-          confetti.push({
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            vx: (Math.random() - 0.5) * 8,
-            vy: (Math.random() - 0.7) * 8 - 2,
-            size: Math.random() * 6 + 4,
-            rotation: Math.random() * Math.PI,
-          });
-        }
-      }
+          if (cell === 1) {
+            /* Wall tile with sleek border */
+            ctx.fillStyle = "#141414";
+            ctx.fillRect(c * CW + 1, r * CH + 1, CW - 2, CH - 2);
 
-      // ─── Render Maze and Language Dot Icons ───
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          if (maze[r][c] === 1) {
-            ctx.fillStyle = wallColor;
-            ctx.fillRect(c * cellW + 1, r * cellH + 1, cellW - 2, cellH - 2);
-          } else if (maze[r][c] === 0) {
-            // Draw language icon abbreviation as collectible point
-            const lang = getCellLanguage(r, c);
-            ctx.fillStyle = LANG_COLORS[lang] || accentColor;
-            ctx.font = "bold 9px 'JetBrains Mono', monospace";
+            ctx.strokeStyle = "#222222";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(c * CW + 1, r * CH + 1, CW - 2, CH - 2);
+
+          } else if (cell === 0) {
+            /* Regular Language Dot: Pill with colored badge and text */
+            const lang = getCellLang(r, c);
+            const color = LANG_COLORS[lang] || "#C8FB4A";
+
+            /* Pill Background */
+            const pw = CW * 0.82;
+            const ph = CH * 0.58;
+            ctx.fillStyle = color + "20"; // ~12% opacity
+            ctx.beginPath();
+            if (ctx.roundRect) {
+              ctx.roundRect(cx - pw / 2, cy - ph / 2, pw, ph, 3);
+            } else {
+              ctx.rect(cx - pw / 2, cy - ph / 2, pw, ph);
+            }
+            ctx.fill();
+
+            /* Language Text */
+            ctx.fillStyle = color;
+            ctx.font = `bold ${Math.round(CW * 0.42)}px 'JetBrains Mono', monospace`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText(lang, c * cellW + cellW / 2, r * cellH + cellH / 2);
+            ctx.fillText(lang, cx, cy + 0.5);
+
+          } else if (cell === 3) {
+            /* Power Pellet: Pulsing glowing coin with language */
+            const lang = getCellLang(r, c);
+            const color = LANG_COLORS[lang] || "#C8FB4A";
+            const scale = 0.88 + 0.16 * Math.sin(pulsePhase);
+
+            /* Outer glow */
+            const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, CW * 0.55 * scale);
+            grad.addColorStop(0, color + "aa");
+            grad.addColorStop(1, color + "00");
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, CW * 0.55 * scale, 0, Math.PI * 2);
+            ctx.fill();
+
+            /* Solid circle */
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(cx, cy, CW * 0.34 * scale, 0, Math.PI * 2);
+            ctx.fill();
+
+            /* Inner text */
+            ctx.fillStyle = "#000000";
+            ctx.font = `bold ${Math.round(CW * 0.36)}px 'JetBrains Mono', monospace`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(lang, cx, cy + 0.5);
           }
         }
       }
 
-      if (hasDots) {
-        // ─── Update Pacman Position (Tile Movement) ───
-        if (pacman.x !== pacman.targetX || pacman.y !== pacman.targetY) {
-          const dx = pacman.targetX - pacman.x;
-          const dy = pacman.targetY - pacman.y;
+      /* ── 3. Move Pacman ── */
+      pacman.mouthAngle += 0.05 * pacman.mouthDir;
+      if (pacman.mouthAngle >= 0.32 || pacman.mouthAngle <= 0.02) pacman.mouthDir *= -1;
 
-          if (Math.abs(dx) > pacman.speed) {
-            pacman.x += Math.sign(dx) * pacman.speed;
-          } else {
-            pacman.x = pacman.targetX;
-          }
+      if (pacman.x !== pacman.targetX || pacman.y !== pacman.targetY) {
+        const dx = pacman.targetX - pacman.x;
+        const dy = pacman.targetY - pacman.y;
+        pacman.x += Math.sign(dx) * Math.min(pacman.speed, Math.abs(dx));
+        pacman.y += Math.sign(dy) * Math.min(pacman.speed, Math.abs(dy));
+      }
 
-          if (Math.abs(dy) > pacman.speed) {
-            pacman.y += Math.sign(dy) * pacman.speed;
-          } else {
-            pacman.y = pacman.targetY;
-          }
-        }
+      /* When at grid center, check eating & next turn */
+      if (Math.abs(pacman.x - pacman.targetX) < 0.01 && Math.abs(pacman.y - pacman.targetY) < 0.01) {
+        pacman.x = pacman.targetX;
+        pacman.y = pacman.targetY;
+        const col = Math.round(pacman.x);
+        const row = Math.round(pacman.y);
+        const cell = maze[row]?.[col];
 
-        // Check turn options at node centers
-        if (pacman.x === pacman.targetX && pacman.y === pacman.targetY) {
-          // Eat dot
-          const col = pacman.x;
-          const row = pacman.y;
-          if (maze[row]?.[col] === 0) {
-            const langEaten = getCellLanguage(row, col);
-            maze[row][col] = 2; // Empty
-            setScore((s) => s + 10);
+        if (cell === 0 || cell === 3) {
+          const lang = getCellLang(row, col);
+          const color = LANG_COLORS[lang] || "#C8FB4A";
+          const pts = cell === 3 ? 50 : 10;
 
-            // Pop score floating text
-            const popupId = Math.random();
-            setPopups((prev) => [
-              ...prev,
-              {
-                id: popupId,
-                text: `+10 ${langEaten}`,
-                x: col * cellW + cellW / 2,
-                y: row * cellH + cellH / 2,
-                color: LANG_COLORS[langEaten] || accentColor,
-              },
-            ]);
+          maze[row][col] = 2; // eaten
+          g.dotsLeft--;
+          g.score += pts;
+          g.collection[lang] = (g.collection[lang] || 0) + 1;
+
+          setScore(g.score);
+          setProgress(Math.round(((TOTAL_DOTS - g.dotsLeft) / TOTAL_DOTS) * 100));
+          setCollection({ ...g.collection });
+
+          /* Power pellet eaten */
+          if (cell === 3) {
+            g.frightenUntil = now + 6000;
+            setIsPower(true);
             setTimeout(() => {
-              setPopups((prev) => prev.filter((p) => p.id !== popupId));
-            }, 800);
+              if (Date.now() >= g.frightenUntil) setIsPower(false);
+            }, 6000);
           }
 
-          // Decide next step direction
-          const nextTargetX = pacman.x + pacman.nextDirX;
-          const nextTargetY = pacman.y + pacman.nextDirY;
+          /* Floating score popup */
+          const pid = Math.random();
+          setPopups((prev) => [
+            ...prev,
+            { id: pid, text: `+${pts} ${lang}`, x: col * CW + CW / 2, y: row * CH + CH / 2, color },
+          ]);
+          setTimeout(() => setPopups((prev) => prev.filter((p) => p.id !== pid)), 750);
 
-          if (!isWall(nextTargetX, nextTargetY)) {
-            pacman.dirX = pacman.nextDirX;
-            pacman.dirY = pacman.nextDirY;
-            pacman.targetX = nextTargetX;
-            pacman.targetY = nextTargetY;
-          } else {
-            const continueTargetX = pacman.x + pacman.dirX;
-            const continueTargetY = pacman.y + pacman.dirY;
-            if (!isWall(continueTargetX, continueTargetY)) {
-              pacman.targetX = continueTargetX;
-              pacman.targetY = continueTargetY;
-            } else {
-              pacman.dirX = 0;
-              pacman.dirY = 0;
-            }
+          if (g.dotsLeft === 0) {
+            setStatus("won");
+            return;
           }
         }
 
-        // ─── Update & Render Ghosts ───
-        ghosts.forEach((ghost) => {
-          if (ghost.x !== ghost.targetX || ghost.y !== ghost.targetY) {
-            const dx = ghost.targetX - ghost.x;
-            const dy = ghost.targetY - ghost.y;
-
-            if (Math.abs(dx) > ghost.speed) {
-              ghost.x += Math.sign(dx) * ghost.speed;
-            } else {
-              ghost.x = ghost.targetX;
-            }
-
-            if (Math.abs(dy) > ghost.speed) {
-              ghost.y += Math.sign(dy) * ghost.speed;
-            } else {
-              ghost.y = ghost.targetY;
-            }
+        /* Try moving in next desired direction */
+        const nx = pacman.x + pacman.nextDirX;
+        const ny = pacman.y + pacman.nextDirY;
+        if (!isWall(nx, ny)) {
+          pacman.dirX = pacman.nextDirX;
+          pacman.dirY = pacman.nextDirY;
+          pacman.targetX = nx;
+          pacman.targetY = ny;
+        } else {
+          /* Continue in current direction */
+          const cx2 = pacman.x + pacman.dirX;
+          const cy2 = pacman.y + pacman.dirY;
+          if (!isWall(cx2, cy2)) {
+            pacman.targetX = cx2;
+            pacman.targetY = cy2;
+          } else {
+            pacman.dirX = 0;
+            pacman.dirY = 0;
           }
+        }
+      }
 
-          if (ghost.x === ghost.targetX && ghost.y === ghost.targetY) {
-            const options = [
-              { dx: 1, dy: 0 },
-              { dx: -1, dy: 0 },
-              { dx: 0, dy: 1 },
-              { dx: 0, dy: -1 },
-            ].filter((d) => {
-              if (d.dx === -ghost.dirX && d.dy === -ghost.dirY) return false;
-              return !isWall(ghost.x + d.dx, ghost.y + d.dy);
-            });
+      /* ── 4. Render Pacman ── */
+      const px = pacman.x * CW + CW / 2;
+      const py = pacman.y * CH + CH / 2;
+      const pr = CW / 2.15;
 
-            const pick =
-              options.length > 0
-                ? options[Math.floor(Math.random() * options.length)]
-                : { dx: -ghost.dirX, dy: -ghost.dirY };
+      let rot = 0;
+      if (pacman.dirX === 1)  rot = 0;
+      if (pacman.dirX === -1) rot = Math.PI;
+      if (pacman.dirY === 1)  rot = Math.PI / 2;
+      if (pacman.dirY === -1) rot = -Math.PI / 2;
 
-            ghost.dirX = pick.dx;
-            ghost.dirY = pick.dy;
-            ghost.targetX = ghost.x + pick.dx;
-            ghost.targetY = ghost.y + pick.dy;
-          }
+      /* Pacman Body */
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.arc(px, py, pr, rot + pacman.mouthAngle, rot + Math.PI * 2 - pacman.mouthAngle);
+      ctx.closePath();
+      ctx.fillStyle = "#C8FB4A";
+      ctx.fill();
 
-          // Draw Ghost Blob
-          ctx.beginPath();
-          const gx = ghost.x * cellW + cellW / 2;
-          const gy = ghost.y * cellH + cellH / 2;
-          ctx.arc(gx, gy, cellW / 2.2, Math.PI, 0, false);
-          ctx.lineTo(gx + cellW / 2.2, gy + cellH / 2.2);
-          ctx.lineTo(gx - cellW / 2.2, gy + cellH / 2.2);
-          ctx.closePath();
-          ctx.fillStyle = ghost.color;
-          ctx.fill();
+      /* Pacman Eye */
+      const eyeX = px + Math.cos(rot - Math.PI / 3.2) * pr * 0.48;
+      const eyeY = py + Math.sin(rot - Math.PI / 3.2) * pr * 0.48;
+      ctx.beginPath();
+      ctx.arc(eyeX, eyeY, pr * 0.12, 0, Math.PI * 2);
+      ctx.fillStyle = "#000000";
+      ctx.fill();
 
-          // Eyes
+      /* ── 5. Move & Render Ghosts ── */
+      ghosts.forEach((ghost) => {
+        const curSpeed = frightened ? ghost.speed * 0.55 : ghost.speed;
+
+        if (ghost.x !== ghost.targetX || ghost.y !== ghost.targetY) {
+          const dx = ghost.targetX - ghost.x;
+          const dy = ghost.targetY - ghost.y;
+          ghost.x += Math.sign(dx) * Math.min(curSpeed, Math.abs(dx));
+          ghost.y += Math.sign(dy) * Math.min(curSpeed, Math.abs(dy));
+        }
+
+        if (Math.abs(ghost.x - ghost.targetX) < 0.01 && Math.abs(ghost.y - ghost.targetY) < 0.01) {
+          ghost.x = ghost.targetX;
+          ghost.y = ghost.targetY;
+
+          const options = [
+            { dx: 1,  dy: 0 },
+            { dx: -1, dy: 0 },
+            { dx: 0,  dy: 1 },
+            { dx: 0,  dy: -1 },
+          ].filter((d) => (d.dx !== -ghost.dirX || d.dy !== -ghost.dirY))
+           .filter((d) => !isWall(ghost.x + d.dx, ghost.y + d.dy));
+
+          const pick = options.length > 0
+            ? options[Math.floor(Math.random() * options.length)]
+            : { dx: -ghost.dirX, dy: -ghost.dirY };
+
+          ghost.dirX = pick.dx;
+          ghost.dirY = pick.dy;
+          ghost.targetX = ghost.x + pick.dx;
+          ghost.targetY = ghost.y + pick.dy;
+        }
+
+        /* Ghost Canvas Coordinates */
+        const gx = ghost.x * CW + CW / 2;
+        const gy = ghost.y * CH + CH / 2;
+        const gr = CW / 2.15;
+
+        let bodyColor = ghost.color;
+        if (frightened) {
+          bodyColor = frightEnding && Math.floor(now / 180) % 2 === 0 ? "#e0e0e0" : "#3b82f6";
+        }
+
+        /* Ghost Body with wavy base */
+        ctx.beginPath();
+        ctx.arc(gx, gy - gr * 0.1, gr, Math.PI, 0, false);
+        const segments = 4;
+        const sw = (gr * 2) / segments;
+        for (let i = 0; i <= segments; i++) {
+          const wx = gx + gr - i * sw;
+          const wy = gy + gr * 0.9 + (i % 2 === 0 ? gr * 0.2 : 0);
+          ctx.lineTo(wx, wy);
+        }
+        ctx.closePath();
+        ctx.fillStyle = bodyColor;
+        ctx.fill();
+
+        if (!frightened) {
+          /* Normal Eyes */
           ctx.fillStyle = "#ffffff";
           ctx.beginPath();
-          ctx.arc(gx - 3, gy - 2, 2.5, 0, Math.PI * 2);
-          ctx.arc(gx + 3, gy - 2, 2.5, 0, Math.PI * 2);
+          ctx.ellipse(gx - gr * 0.32, gy - gr * 0.15, gr * 0.26, gr * 0.32, 0, 0, Math.PI * 2);
+          ctx.ellipse(gx + gr * 0.32, gy - gr * 0.15, gr * 0.26, gr * 0.32, 0, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = "#000000";
+
+          ctx.fillStyle = "#1a365d";
           ctx.beginPath();
-          ctx.arc(gx - 3 + ghost.dirX, gy - 2 + ghost.dirY, 1, 0, Math.PI * 2);
-          ctx.arc(gx + 3 + ghost.dirX, gy - 2 + ghost.dirY, 1, 0, Math.PI * 2);
+          ctx.arc(gx - gr * 0.32 + ghost.dirX * gr * 0.1, gy - gr * 0.15 + ghost.dirY * gr * 0.1, gr * 0.13, 0, Math.PI * 2);
+          ctx.arc(gx + gr * 0.32 + ghost.dirX * gr * 0.1, gy - gr * 0.15 + ghost.dirY * gr * 0.1, gr * 0.13, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          /* Frightened Face */
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(gx - gr * 0.28, gy - gr * 0.1, gr * 0.1, 0, Math.PI * 2);
+          ctx.arc(gx + gr * 0.28, gy - gr * 0.1, gr * 0.1, 0, Math.PI * 2);
           ctx.fill();
 
-          // Collision check
-          const dist = Math.hypot(pacman.x - ghost.x, pacman.y - ghost.y);
-          if (dist < 0.6) {
-            setFlashRed(true);
-            setTimeout(() => setFlashRed(false), 300);
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          const mx = gx - gr * 0.35;
+          const mw = (gr * 0.7) / 3;
+          ctx.moveTo(mx, gy + gr * 0.2);
+          ctx.lineTo(mx + mw, gy + gr * 0.1);
+          ctx.lineTo(mx + mw * 2, gy + gr * 0.2);
+          ctx.lineTo(mx + mw * 3, gy + gr * 0.1);
+          ctx.stroke();
+        }
 
-            // Reset
+        /* ── 6. Collision Check ── */
+        const dist = Math.hypot(pacman.x - ghost.x, pacman.y - ghost.y);
+        if (dist < 0.65) {
+          if (frightened) {
+            /* Eat Ghost */
+            ghost.x = 9;
+            ghost.y = 8;
+            ghost.targetX = 9;
+            ghost.targetY = 7;
+            ghost.dirX = 0;
+            ghost.dirY = -1;
+
+            g.score += 200;
+            setScore(g.score);
+
+            const pid = Math.random();
+            setPopups((prev) => [
+              ...prev,
+              { id: pid, text: "+200 👻", x: gx, y: gy, color: "#38bdf8" },
+            ]);
+            setTimeout(() => setPopups((prev) => prev.filter((p) => p.id !== pid)), 800);
+
+          } else if (now > g.damageUntil) {
+            /* Pacman Takes Damage */
+            g.damageUntil = now + 600;
+            setFlashRed(true);
+            setTimeout(() => setFlashRed(false), 500);
+
+            g.lives--;
+            setLives(g.lives);
+
+            if (g.lives <= 0) {
+              setStatus("over");
+              return;
+            }
+
+            /* Reset Pacman to Starting Position */
             pacman.x = 9;
             pacman.y = 12;
             pacman.targetX = 9;
@@ -353,151 +506,120 @@ export default function PacmanGame({ onClose }) {
             pacman.nextDirX = 0;
             pacman.nextDirY = 0;
           }
-        });
-
-        // ─── Render Pacman ───
-        ctx.beginPath();
-        const px = pacman.x * cellW + cellW / 2;
-        const py = pacman.y * cellH + cellH / 2;
-        const radius = cellW / 2.1;
-
-        let rotation = 0;
-        if (pacman.dirX === 1) rotation = 0;
-        else if (pacman.dirX === -1) rotation = Math.PI;
-        else if (pacman.dirY === 1) rotation = Math.PI / 2;
-        else if (pacman.dirY === -1) rotation = -Math.PI / 2;
-
-        if (pacman.mouthOpen) {
-          ctx.arc(
-            px,
-            py,
-            radius,
-            rotation + Math.PI / 6,
-            rotation + Math.PI * 1.83,
-            false
-          );
-          ctx.lineTo(px, py);
-        } else {
-          ctx.arc(px, py, radius, rotation, rotation + Math.PI * 2, false);
         }
+      });
 
-        ctx.fillStyle = accentColor;
-        ctx.fill();
-      } else {
-        // Draw Win Panel
-        ctx.fillStyle = accentColor;
-        ctx.font = "bold 24px Syne";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("YOU WIN", canvas.width / 2, canvas.height / 2);
-
-        // Update Confetti
-        confetti.forEach((p) => {
-          p.x += p.vx;
-          p.y += p.vy;
-          p.vy += 0.2;
-          p.rotation += 0.05;
-
-          ctx.save();
-          ctx.translate(p.x, p.y);
-          ctx.rotate(p.rotation);
-          ctx.fillStyle = "rgba(200, 251, 74, 0.8)";
-          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-          ctx.restore();
-        });
-      }
-
-      animationFrameId = requestAnimationFrame(loop);
+      rafRef.current = requestAnimationFrame(step);
     };
 
-    loop();
-
+    rafRef.current = requestAnimationFrame(step);
     return () => {
-      cancelAnimationFrame(animationFrameId);
-      window.removeEventListener("keydown", handleKeyDown);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [gameState]);
+  }, [status]);
+
+  /* D-pad handler for mobile / touch controls */
+  const dPad = (key) => {
+    const dir = DIR_MAP[key];
+    if (gameRef.current && dir) {
+      gameRef.current.pacman.nextDirX = dir.dx;
+      gameRef.current.pacman.nextDirY = dir.dy;
+    }
+  };
+
+  const livesArr = Array.from({ length: 3 }, (_, i) => i < lives);
 
   return (
-    <motion.div
-      initial={{ scale: 0.95, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={springs.snappy}
-      ref={containerRef}
+    <div
       style={{
         width: "100%",
         background: "var(--surface)",
-        border: `1px solid ${flashRed ? "#ff4444" : "var(--border)"}`,
+        border: `1px solid ${flashRed ? "#ef4444" : "var(--border)"}`,
         borderRadius: 4,
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
         transition: "border-color 0.15s ease-out",
-        boxShadow: "none",
+        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.75)",
+        userSelect: "none",
       }}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
     >
-      {/* Header bar */}
+      {/* ── Title Bar ── */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: "8px 12px",
+          padding: "8px 14px",
           borderBottom: "1px solid var(--border)",
-          background: "rgba(0, 0, 0, 0.2)",
-          userSelect: "none",
+          background: "rgba(0, 0, 0, 0.4)",
         }}
       >
-        <div style={{ display: "flex", gap: 5 }}>
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: "#ff5f56",
-            }}
-          />
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: "#ffbd2e",
-            }}
-          />
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: "#27c93f",
-            }}
-          />
+        {/* Retro Window Dots */}
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff5f56" }} />
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ffbd2e" }} />
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#27c93f" }} />
         </div>
 
+        {/* Status Indicators */}
         <div
           className="font-mono"
           style={{
             fontSize: 11,
             color: "var(--muted)",
             display: "flex",
-            gap: 16,
+            gap: 14,
             alignItems: "center",
           }}
         >
-          <span>PAC-MAN.exe</span>
-          <span style={{ color: "var(--text)" }}>SCORE: {score}</span>
+          <span style={{ letterSpacing: "0.08em", fontWeight: 700 }}>PAC-MAN.exe</span>
+          <span style={{ color: "var(--accent)", fontVariantNumeric: "tabular-nums" }}>
+            SCORE: {score.toString().padStart(5, "0")}
+          </span>
+
+          {/* Lives */}
+          <span style={{ display: "flex", gap: 3, alignItems: "center" }}>
+            {livesArr.map((alive, i) => (
+              <svg key={i} width="11" height="11" viewBox="0 0 10 10">
+                <path
+                  d="M5 5 L9 2 A4.5 4.5 0 1 1 9 8 Z"
+                  fill={alive ? "var(--accent)" : "rgba(255,255,255,0.15)"}
+                />
+              </svg>
+            ))}
+          </span>
+
+          {/* Power pellet active badge */}
+          {isPower && (
+            <span
+              style={{
+                color: "#38bdf8",
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                animation: "pulsePower 0.6s infinite alternate",
+              }}
+            >
+              POWER
+            </span>
+          )}
         </div>
 
+        {/* Close Button */}
         <button
           onClick={onClose}
+          aria-label="Close Pacman game"
           style={{
             background: "none",
             border: "none",
             color: "var(--muted)",
-            fontSize: 12,
-            cursor: "none",
-            padding: 2,
+            fontSize: 13,
+            cursor: "pointer",
+            padding: "2px 4px",
+            lineHeight: 1,
           }}
           onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
           onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted)")}
@@ -506,20 +628,30 @@ export default function PacmanGame({ onClose }) {
         </button>
       </div>
 
-      {/* Game canvas area */}
-      <div
-        style={{ position: "relative", width: "100%", background: "#000000" }}
-      >
+      {/* ── Progress Bar ── */}
+      <div style={{ height: 2, background: "rgba(255,255,255,0.06)" }}>
+        <div
+          style={{
+            height: "100%",
+            width: `${progress}%`,
+            background: "var(--accent)",
+            transition: "width 0.2s ease-out",
+          }}
+        />
+      </div>
+
+      {/* ── Canvas Area & Overlays ── */}
+      <div style={{ position: "relative", width: "100%", background: "#050505" }}>
         <canvas
           ref={canvasRef}
-          width={400}
-          height={320}
+          width={500}
+          height={400}
           style={{
             display: "block",
             width: "100%",
             height: "auto",
             aspectRatio: "5/4",
-            background: "#000000",
+            background: "#050505",
           }}
         />
 
@@ -530,34 +662,240 @@ export default function PacmanGame({ onClose }) {
             className="font-mono"
             style={{
               position: "absolute",
-              left: p.x,
-              top: p.y,
+              left: `${(p.x / 500) * 100}%`,
+              top: `${(p.y / 400) * 100}%`,
               transform: "translate(-50%, -50%)",
               fontSize: 10,
               color: p.color,
-              animation: "floatUp 0.8s ease-out forwards",
+              fontWeight: 700,
+              animation: "floatUp 0.75s ease-out forwards",
               pointerEvents: "none",
-              fontWeight: "bold",
-              textShadow: "0 0 2px #000",
+              textShadow: "0 1px 4px rgba(0,0,0,0.9)",
+              whiteSpace: "nowrap",
             }}
           >
             {p.text}
           </span>
         ))}
+
+        {/* End Game Overlays */}
+        <AnimatePresence>
+          {status !== "playing" && (
+            <motion.div
+              key={status}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "rgba(0, 0, 0, 0.88)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                padding: 20,
+                textAlign: "center",
+              }}
+            >
+              {status === "won" && (
+                <>
+                  <span
+                    className="font-display"
+                    style={{ fontSize: 28, color: "var(--accent)", fontWeight: 900 }}
+                  >
+                    YOU WIN!
+                  </span>
+                  <span className="font-mono" style={{ fontSize: 11, color: "var(--muted)" }}>
+                    All programming languages collected! Final score: {score}
+                  </span>
+                  <button
+                    onClick={restartGame}
+                    className="font-mono"
+                    style={{
+                      marginTop: 8,
+                      padding: "8px 24px",
+                      background: "var(--accent)",
+                      color: "#000",
+                      border: "none",
+                      borderRadius: 2,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Play Again
+                  </button>
+                </>
+              )}
+
+              {status === "over" && (
+                <>
+                  <span
+                    className="font-display"
+                    style={{ fontSize: 28, color: "#ef4444", fontWeight: 900 }}
+                  >
+                    GAME OVER
+                  </span>
+                  <span className="font-mono" style={{ fontSize: 11, color: "var(--muted)" }}>
+                    Caught by ghosts! Final score: {score}
+                  </span>
+                  <button
+                    onClick={restartGame}
+                    className="font-mono"
+                    style={{
+                      marginTop: 8,
+                      padding: "8px 24px",
+                      background: "transparent",
+                      color: "var(--text)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 2,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Try Again
+                  </button>
+                </>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ── Live Language Collection Bar ── */}
+      <div
+        style={{
+          display: "flex",
+          borderTop: "1px solid var(--border)",
+          background: "rgba(0, 0, 0, 0.25)",
+          overflowX: "auto",
+        }}
+      >
+        {LANG_MAP.map((lang) => {
+          const count = collection[lang] || 0;
+          const active = count > 0;
+          return (
+            <div
+              key={lang}
+              style={{
+                flex: "1 0 auto",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "6px 4px",
+                borderRight: "1px solid var(--border)",
+                minWidth: 42,
+                opacity: active ? 1 : 0.25,
+                transition: "opacity 0.2s, background 0.2s",
+                background: active ? `${LANG_COLORS[lang]}0a` : "transparent",
+              }}
+            >
+              <span
+                className="font-mono"
+                style={{
+                  fontSize: 10,
+                  color: LANG_COLORS[lang],
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                }}
+              >
+                {lang}
+              </span>
+              <span
+                className="font-mono"
+                style={{
+                  fontSize: 9,
+                  color: "var(--muted)",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {active ? `×${count}` : "·"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Footer controls hint & mobile D-pad ── */}
+      <div
+        style={{
+          padding: "8px 14px",
+          borderTop: "1px solid var(--border)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 8,
+          background: "rgba(0, 0, 0, 0.4)",
+        }}
+      >
+        <span
+          className="font-mono"
+          style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.04em" }}
+        >
+          Use <kbd style={{ border: "1px solid var(--border)", padding: "1px 4px", borderRadius: 2 }}>Arrow keys</kbd> or <kbd style={{ border: "1px solid var(--border)", padding: "1px 4px", borderRadius: 2 }}>WASD</kbd> · Corners frighten ghosts
+        </span>
+
+        {/* Mobile-only Quick D-Pad */}
+        <div
+          className="mobile-only"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 30px)",
+            gridTemplateRows: "repeat(2, 26px)",
+            gap: 4,
+            marginLeft: "auto",
+          }}
+        >
+          {[
+            { key: "ArrowUp",    label: "↑", col: 2, row: 1 },
+            { key: "ArrowLeft",  label: "←", col: 1, row: 2 },
+            { key: "ArrowDown",  label: "↓", col: 2, row: 2 },
+            { key: "ArrowRight", label: "→", col: 3, row: 2 },
+          ].map(({ key, label, col, row }) => (
+            <button
+              key={key}
+              onPointerDown={() => dPad(key)}
+              style={{
+                gridColumn: col,
+                gridRow: row,
+                background: "var(--raised)",
+                border: "1px solid var(--border)",
+                borderRadius: 2,
+                color: "var(--text)",
+                fontSize: 12,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                lineHeight: 1,
+              }}
+              aria-label={key}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <style>{`
         @keyframes floatUp {
-          0% {
-            transform: translate(-50%, -50%) translateY(0);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(-50%, -50%) translateY(-24px);
-            opacity: 0;
-          }
+          0%   { transform: translate(-50%, -50%) translateY(0); opacity: 1; }
+          100% { transform: translate(-50%, -50%) translateY(-22px); opacity: 0; }
+        }
+        @keyframes pulsePower {
+          0%   { opacity: 0.6; }
+          100% { opacity: 1; filter: drop-shadow(0 0 6px #38bdf8); }
         }
       `}</style>
-    </motion.div>
+    </div>
   );
 }

@@ -10,6 +10,7 @@ import Contact from "./components/Contact";
 import CommandPalette from "./components/CommandPalette";
 import CustomCursor from "./components/CustomCursor";
 import { useCommandPalette } from "./hooks/useCommandPalette";
+import { data } from "./constants/data";
 
 export default function App() {
   const palette = useCommandPalette();
@@ -28,15 +29,17 @@ export default function App() {
 
   const isAllProjects = currentHash === "#all-projects";
 
-  // Ensure scroll works when hash changes back to a home section
   useEffect(() => {
-    if (!isAllProjects && currentHash && currentHash.startsWith("#") && currentHash !== "#all-projects") {
+    if (
+      !isAllProjects &&
+      currentHash &&
+      currentHash.startsWith("#") &&
+      currentHash !== "#all-projects"
+    ) {
       const id = currentHash.slice(1);
       const timer = setTimeout(() => {
         const el = document.getElementById(id);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 80);
       return () => clearTimeout(timer);
     }
@@ -55,7 +58,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: 0.22 }}
             >
               <AllProjects />
             </motion.div>
@@ -65,20 +68,12 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: 0.22 }}
             >
               <Hero />
-
-              <div className="section-divider" />
               <About />
-
-              <div className="section-divider" />
               <Experience />
-
-              <div className="section-divider" />
               <Projects />
-
-              <div className="section-divider" />
               <Contact />
             </motion.div>
           )}
@@ -88,7 +83,7 @@ export default function App() {
       {/* Footer — minimal, static */}
       <footer
         style={{
-          padding: "40px 0",
+          padding: "36px 0",
           borderTop: "1px solid var(--border)",
         }}
       >
@@ -99,32 +94,73 @@ export default function App() {
             justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
-            gap: 16,
+            gap: 12,
           }}
         >
           <span
-            style={{ fontSize: 12, color: "var(--muted)" }}
             className="font-mono"
+            style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.04em" }}
           >
             © {new Date().getFullYear()} Piyush Garg
           </span>
-          <span
-            style={{ fontSize: 12, color: "var(--muted)" }}
-            className="font-mono"
-          >
-            Press{" "}
-            <kbd
+
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            {/* Social links */}
+            <a
+              href={data.contact.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GitHub profile"
+              className="font-mono"
               style={{
-                border: "1px solid var(--border)",
-                borderRadius: 3,
-                padding: "1px 5px",
                 fontSize: 11,
+                color: "var(--muted)",
+                letterSpacing: "0.04em",
+                transition: "color 0.15s",
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted)")}
             >
-              /
-            </kbd>{" "}
-            to navigate
-          </span>
+              GitHub
+            </a>
+            <a
+              href={data.contact.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="LinkedIn profile"
+              className="font-mono"
+              style={{
+                fontSize: 11,
+                color: "var(--muted)",
+                letterSpacing: "0.04em",
+                transition: "color 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted)")}
+            >
+              LinkedIn
+            </a>
+
+            {/* Command palette hint */}
+            <span
+              className="font-mono"
+              style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.04em" }}
+            >
+              Press{" "}
+              <kbd
+                style={{
+                  border: "1px solid var(--border)",
+                  borderRadius: 2,
+                  padding: "1px 5px",
+                  fontSize: 10,
+                  fontFamily: "JetBrains Mono, monospace",
+                }}
+              >
+                /
+              </kbd>{" "}
+              to navigate
+            </span>
+          </div>
         </div>
       </footer>
 

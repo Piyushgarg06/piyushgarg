@@ -1,8 +1,12 @@
+/* ─── Design tokens (mirror of index.css :root) ── */
 :root {
-  --bg:      #080808;
-  --surface: #0F0F0F;
-  --border:  #1A1A1A;
-  --text:    #EBEBEB;
-  --muted:   #4A4A4A;
-  --accent:  #C8FB4A;
+  --bg:        #080808;
+  --surface:   #111111;
+  --raised:    #161616;
+  --border:    #1E1E1E;
+  --text:      #F0F0F0;
+  --text-2:    #A0A0A0;
+  --muted:     #717171;
+  --accent:    #C8FB4A;
+  --accent-dim: rgba(200, 251, 74, 0.12);
 }

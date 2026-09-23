@@ -4,6 +4,8 @@ export const data = {
     line2: "GARG",
   },
 
+  role: "AI Engineer · Builder",
+
   subtitle:
     "Building developer tools that think in graphs instead of documents.",
 
@@ -31,16 +33,20 @@ export const data = {
     {
       number: "01",
       name: "Synapse",
+      problem: "Git history and docs are stored as flat files — reasoning about a codebase requires reading everything from scratch each time.",
       description:
         "Local-first repository intelligence system that transforms Git history and docs into searchable knowledge graphs.",
+      result: "Enables semantic queries over a codebase with no cloud dependency.",
       tags: ["Python", "Ollama", "Knowledge Graphs", "Git"],
       github: "https://github.com/Piyushgarg06/SynapseAI",
     },
     {
       number: "02",
       name: "Diffusion Calorimeter Generation",
+      problem: "High-energy physics simulations require expensive, sparse detector data that is slow and costly to generate.",
       description:
         "Diffusion models for sparse calorimeter detector data — generative modeling for high-energy physics simulations.",
+      result: "Produces statistically valid calorimeter shower samples at a fraction of simulation cost.",
       tags: ["PyTorch", "Diffusion Models", "Deep Learning", "Physics AI"],
       github:
         "https://github.com/Piyushgarg06/diffusion-calorimeter-generation",
@@ -48,13 +54,6 @@ export const data = {
   ],
 
   experience: [
-    {
-      role: "AI Implementation / Development Intern",
-      org: "MNB Research · AbroBot",
-      period: "Sep 2026 — Present",
-      description:
-        "Supporting the implementation and refinement of AI workflows and automations for AbroBot — an AI study-abroad mentor serving 350k+ students. Working with LLM-based tools, RAG pipelines, and AI agents (n8n) to streamline university selection, SOP guidance, and visa workflows. Bridging technical and business teams for smooth onboarding of new AI tooling.",
-    },
     {
       role: "Open Source Contributor",
       org: "Various",
@@ -73,7 +72,7 @@ export const data = {
 
 /* Spring presets — use these everywhere, never inline spring configs */
 export const springs = {
-  gentle: { type: "spring", stiffness: 60, damping: 20, mass: 1 },
-  snappy: { type: "spring", stiffness: 200, damping: 28, mass: 0.8 },
+  gentle:  { type: "spring", stiffness: 60,  damping: 20, mass: 1   },
+  snappy:  { type: "spring", stiffness: 200, damping: 28, mass: 0.8 },
   precise: { type: "spring", stiffness: 300, damping: 35, mass: 0.5 },
 };
