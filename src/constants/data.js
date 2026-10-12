@@ -33,12 +33,14 @@ export const data = {
     {
       number: "01",
       name: "Synapse",
-      problem: "Git history and docs are stored as flat files — reasoning about a codebase requires reading everything from scratch each time.",
+      problem:
+        "Source code and Git history are flat files — AI coding assistants and developers lack persistent structural context, re-parsing blindly and missing downstream blast-radius impacts.",
       description:
-        "Local-first repository intelligence system that transforms Git history and docs into searchable knowledge graphs.",
-      result: "Enables semantic queries over a codebase with no cloud dependency.",
-      tags: ["Python", "Ollama", "Knowledge Graphs", "Git"],
-      github: "https://github.com/Piyushgarg06/SynapseAI",
+        "Local-first Repository Intelligence Engine that constructs and maintains a persistent, structured representation of a software codebase.",
+      result:
+        "Analyzes code with Tree-sitter, builds a queryable SQLite knowledge graph, tracks incremental Git changes, computes blast-radius deletion impact, and exposes native MCP support for AI tools.",
+      tags: ["Python", "Tree-sitter", "SQLite", "MCP", "Knowledge Graphs"],
+      github: "https://github.com/Piyushgarg06/Synapse",
     },
     {
       number: "02",
