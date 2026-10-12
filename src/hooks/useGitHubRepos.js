@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 
 const GITHUB_USERNAME = "Piyushgarg06";
 const API_URL = `https://api.github.com/users/${GITHUB_USERNAME}/repos?per_page=100&sort=updated`;
-const CACHE_KEY = "github_repos_cache";
+const CACHE_KEY = "github_repos_cache_v2";
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour — matches GitHub's unauthenticated rate window
 
 /**
@@ -100,7 +100,7 @@ export function useGitHubRepos() {
 
         if (!cancelled) {
           const filtered = data
-            .filter((r) => !r.fork)
+            .filter((r) => !r.fork && r.name !== "SynapseAI")
             .sort((a, b) => b.stargazers_count - a.stargazers_count);
           setRepos(filtered);
           setError(null);
